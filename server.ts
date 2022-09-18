@@ -105,7 +105,7 @@ app.post("/newbooking", async (req, res) =>{
       console.log('bookingsforthattable', bookingsForThatTable)
     }
     if (chosenTableId) {
-      const booking_id = await client.query('insert into bookings(customer_id, table_id, date, time, covers) values ($1 ,$2, $3, $4) returning booking_id', [customer_id, chosenTableId, date, time, numberOfPeople])
+      const booking_id = await client.query('insert into bookings(customer_id, table_id, date, time, covers) values ($1 ,$2, $3, $4, $5) returning booking_id', [customer_id, chosenTableId, date, time, numberOfPeople])
       res.json(booking_id.rows)
     } else {
       res.json({"error": "No table available"})
@@ -113,6 +113,18 @@ app.post("/newbooking", async (req, res) =>{
   } catch (error) {
     console.error(error)
   }
+})
+
+app.get("/covers/:date", async (req, res) => {
+  try {
+    const date = req.params.date;
+    // const sevenDays: string[] = 
+    const coversDb = await client.query('select date, sum(covers) as total_covers from bookings where date=$1 group by date', [date])
+    res.json(coversDb.rows)
+  } catch (error) {
+    console.error(error);
+  }
+
 })
 
 
