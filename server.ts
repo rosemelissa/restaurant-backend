@@ -2,6 +2,8 @@ import { Client } from "pg";
 import { config } from "dotenv";
 import express from "express";
 import cors from "cors";
+import tableIsAvailable from "./utils/tableIsAvailable";
+import timeIsAvailable from "./utils/timeIsAvailable";
 
 config(); //Read .env file lines as though they were env vars.
 
@@ -37,17 +39,27 @@ app.get("/possibletimes/:date/:numberofpeople", async (req, res) => {
     const numberOfPeople: number = parseInt(req.params.numberofpeople);
     const possibleTables = await client.query('select table_id from tables where capacity >= $1', [numberOfPeople])
     const unavailableTimes = await client.query('select bookings.table_id, bookings.time from bookings left join tables on bookings.table_id = tables.table_id where date=$1 and bookings.table_id in (select table_id from tables where capacity >= $2)', [date, numberOfPeople])
-    let availableTimes: string[] = [];
-    for (let table_id of possibleTables.rows) {
-      let times=['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
-      for (let row of unavailableTimes.rows) {
-        if ((row.table_id === table_id) && (times.includes(row.time))) {
-          let index = times.indexOf(row.time);
-          times = times.splice(index, 3); //remove any unavailble times from the array of possible times for this table_id
-        }
+    const allTimes = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
+    const availableTimes: string[] = [];
+    for (const time of allTimes) {
+      if (timeIsAvailable(time, unavailableTimes.rows, possibleTables.rows)) {
+        availableTimes.push(time)
       }
-      availableTimes = [...availableTimes, ...times];
     }
+    
+    
+    
+    // let availableTimes: string[] = [];
+    // for (let table_id of possibleTables.rows) {
+    //   let times=['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
+    //   for (let row of unavailableTimes.rows) {
+    //     if ((row.table_id === table_id) && (times.includes(row.time))) {
+    //       let index = times.indexOf(row.time);
+    //       times = times.splice(index, 3); //remove any unavailble times from the array of possible times for this table_id
+    //     }
+    //   }
+    //   availableTimes = [...availableTimes, ...times];
+    // }
     let uniqueAvailableTimes: string[] = [];
     for (let time of availableTimes) {
       if (!uniqueAvailableTimes.includes(time)) {
@@ -57,6 +69,49 @@ app.get("/possibletimes/:date/:numberofpeople", async (req, res) => {
     res.send(uniqueAvailableTimes);
   } catch (error) {
     console.error(error);
+  }
+})
+
+app.post("/newbooking", async (req, res) =>{
+  try {
+    const {firstname,
+      surname,
+      email,
+      mailingList,
+      numberOfPeople,
+      date,
+      time,} = req.body;
+    const customerDb = await client.query('insert into customers(firstname, surname, email, mailing_list) values ($1, $2, $3, $4) returning customer_id', [firstname, surname, email, mailingList])
+    const {customer_id} = customerDb.rows[0]
+    console.log('customer id', customer_id)
+    const possibleTablesDb = await client.query('select table_id from tables where capacity>=$1 order by capacity asc', [numberOfPeople]);
+    const possibleTables = possibleTablesDb.rows
+    console.log('possible table', possibleTables)
+    let chosenTableId;
+    // const allTimes=['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'];
+    // const index = allTimes.indexOf(time);
+    // console.log(index);
+    // const timesForThisBooking = [allTimes[index], allTimes[index + 1], allTimes[index + 2]]
+    // console.log(timesForThisBooking)
+    for (let row of possibleTables) {
+      const {table_id} = row
+      const bookingsDb = await client.query('select time from bookings where table_id=$1 and date=$2', [table_id, date])
+      const bookingsForThatTable = bookingsDb.rows;
+      if (tableIsAvailable(bookingsForThatTable, time)) {
+        chosenTableId = table_id;
+        console.log('using table', chosenTableId)
+        break;
+      }
+      console.log('bookingsforthattable', bookingsForThatTable)
+    }
+    if (chosenTableId) {
+      const booking_id = await client.query('insert into bookings(customer_id, table_id, date, time) values ($1 ,$2, $3, $4) returning booking_id', [customer_id, chosenTableId, date, time])
+      res.json(booking_id.rows)
+    } else {
+      res.json({"error": "No table available"})
+    }
+  } catch (error) {
+    console.error(error)
   }
 })
 
