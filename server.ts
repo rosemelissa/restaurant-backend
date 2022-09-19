@@ -132,6 +132,16 @@ app.get("/covers/:date", async (req, res) => {
 
 })
 
+app.get("/bookingsdata/:date", async (req, res) => {
+  try {
+    const date = req.params.date;
+    const bookingsDataDb = await client.query('select * from bookings left join customers on bookings.customer_id = customers.customer_id where date = $1 order by bookings.time, bookings.table_id', [date])
+    res.json(bookingsDataDb.rows);
+  } catch (error) {
+    console.error(error);
+  }
+})
+
 
 //Start the server on the given port
 const port = process.env.PORT;
