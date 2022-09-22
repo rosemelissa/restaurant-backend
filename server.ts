@@ -142,6 +142,15 @@ app.get("/bookingsdata/:date", async (req, res) => {
   }
 })
 
+app.get("/alltables", async (req, res) => {
+  try {
+    const tableDb = await client.query('select * from tables')
+    res.json(tableDb.rows)
+  } catch (error) {
+    console.error(error);
+  }
+})
+
 
 //Start the server on the given port
 const port = process.env.PORT;
