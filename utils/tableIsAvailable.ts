@@ -11,15 +11,3 @@ export default function tableIsAvailable(bookingsForThatTable: {time: string}[],
     };
     return true;
 }
-
-//         const i = availableTimes.indexOf(booking.time)
-//         const timesForThisBooking = [availableTimes[i], availableTimes[i+1], availableTimes[i+2]]
-//         for (const time of timesForThisBooking) {
-//             if (badTimes.includes(time)) {
-//                 console.log('line12')
-//                 return false;
-//             }
-//         }
-//     }
-//     return true;
-// }
