@@ -97,8 +97,6 @@ app.get("/covers/:date", async (req, res) => {
   try {
     const date = req.params.date;
     const sevenDays: string[] = getNextSevenDays(date);
-    console.log(sevenDays)
-    console.log(sevenDays)
     const coversDb = await client.query('select date, sum(covers) as total_covers from bookings where date in ($1, $2, $3, $4, $5, $6, $7) group by date', [...sevenDays])
     res.json(coversDb.rows)
   } catch (error) {
