@@ -5,6 +5,8 @@ import cors from "cors";
 import tableIsAvailable from "./utils/tableIsAvailable";
 import timeIsAvailable from "./utils/timeIsAvailable";
 import getNextSevenDays from "./utils/getNextSevenDays";
+import main from "./sendEmail";
+import sendEmail from "./sendEmail";
 
 config(); //Read .env file lines as though they were env vars.
 
@@ -84,6 +86,13 @@ app.post("/newbooking", async (req, res) =>{
     }
     if (chosenTableId) {
       const booking_id = await client.query('insert into bookings(customer_id, table_id, date, time, covers) values ($1 ,$2, $3, $4, $5) returning booking_id', [customer_id, chosenTableId, date, time, numberOfPeople])
+      sendEmail(firstname,
+        surname,
+        email,
+        mailingList,
+        numberOfPeople,
+        date,
+        time);
       res.json(booking_id.rows)
     } else {
       res.json({"error": "No table available"})
